@@ -239,7 +239,8 @@ $('#generate-btn').addEventListener('click', async event => {
   saveProfile()
   const reasons = getAndSaveReasons()
   const pdfBlob = await generatePdf(getProfile(), reasons)
-  localStorage.clear()
+  // DO NOT CLEAR THE LOCAL STORAGE
+  //localStorage.clear()
   const creationDate = new Date().toLocaleDateString('fr-CA')
   const creationHour = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', '-')
   downloadBlob(pdfBlob, `attestation-${creationDate}_${creationHour}.pdf`) 
@@ -323,4 +324,47 @@ Object.keys(conditions).forEach(field => {
 function addVersion () {
   document.getElementById('version').innerHTML = `${new Date().getFullYear()} - ${process.env.VERSION}`
 }
+
+function downloadPass() {
+  console.log("Downloading Apple Pass...")
+  saveProfile()
+  let profile = getProfile()
+  let reasons = getAndSaveReasons()
+
+   fetch("https://covid-pkpass.herokuapp.com", {
+      method: "post",
+      headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ profile, reasons }),
+  })
+      .then(response => response.blob())
+      .then(blob => {
+        console.log("Response...")
+          window.loadingPass = false
+          console.log("Received")
+          var url = window.URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = "pass.pkpass";
+          document.body.appendChild(a); // we need to append the element to the dom -> otherwise it will not work in firefox
+          a.click();
+          a.remove();  //afterwards we remove the element again  
+      })
+      .catch(err => {
+          window.loadingPass = false
+          console.error(err)
+      })
+
+}
+
+$('#apple-pass-btn').addEventListener('click', async event => {
+  console.log('Apple pass btn clicked')
+  if(!window.loadingPass) {
+    downloadPass()
+  } 
+  window.loadingPass = true
+})
+
 addVersion()
